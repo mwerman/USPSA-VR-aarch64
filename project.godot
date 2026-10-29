@@ -10,13 +10,13 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-Drills = preload('res://scripts/drills.gd')
-Defs = preload('res://scripts/defs.gd')
-Gun = preload('res://scripts/gun.gd')
-Mag = preload('res://scripts/mag.gd')
-RangeBuilder = preload('res://scripts/range_builder.gd')
-Target = preload('res://scripts/target.gd')
-Barricade = preload('res://scripts/barricade.gd')
+Defs="res://scripts/defs.gd"
+Gun="res://scripts/gun.gd"
+Mag="res://scripts/mag.gd"
+RangeBuilder="res://scripts/range_builder.gd"
+Target="res://scripts/target.gd"
+Barricade="res://scripts/barricade.gd"
+Drills="res://scripts/drills.gd"
 
 [display]
 
