@@ -1,0 +1,71 @@
+name: Build aarch64 AppImage
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  GODOT_VERSION: "4.4.1"
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Godot and export templates (arm64)
+        run: |
+          set -eux
+          sudo apt-get update
+          sudo apt-get install -y wget unzip file libfontconfig1 libxcursor1 libxinerama1 libxrandr2 libxi6 libgl1 || true
+          BASE="https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-stable"
+          wget -q "$BASE/Godot_v${GODOT_VERSION}-stable_linux.arm64.zip" -O godot.zip
+          wget -q "$BASE/Godot_v${GODOT_VERSION}-stable_export_templates.tpz" -O templates.tpz
+          unzip -q godot.zip
+          mv "Godot_v${GODOT_VERSION}-stable_linux.arm64" godot
+          chmod +x godot
+          mkdir -p "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable"
+          unzip -q templates.tpz -d tpl
+          mv tpl/templates/* "$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.stable/"
+
+      - name: Import, generate OpenXR action map, export
+        run: |
+          set -eux
+          mkdir -p build
+          ./godot --headless --path . --import || true
+          ./godot --headless --path . --import || true
+          ./godot --headless --path . --script res://tools/gen_action_map.gd || true
+          ls -la openxr_action_map.tres || echo "WARNING: no action map generated, Godot will use its built-in default"
+          ./godot --headless --path . --export-release "Linux ARM64" build/USPSA-VR.arm64
+          file build/USPSA-VR.arm64
+
+      - name: Package AppImage
+        run: |
+          set -eux
+          rm -rf AppDir && mkdir -p AppDir/usr/bin
+          cp build/USPSA-VR.arm64 AppDir/usr/bin/
+          chmod +x AppDir/usr/bin/USPSA-VR.arm64
+          cp icon.svg AppDir/uspsa-vr.svg
+          cp icon.svg AppDir/.DirIcon
+          printf '%s\n' '[Desktop Entry]' 'Type=Application' 'Name=USPSA VR Range' 'Exec=USPSA-VR.arm64' 'Icon=uspsa-vr' 'Categories=Game;' > AppDir/uspsa-vr.desktop
+          printf '%s\n' '#!/bin/sh' 'HERE="$(dirname "$(readlink -f "$0")")"' 'exec "$HERE/usr/bin/USPSA-VR.arm64" --xr-mode on "$@"' > AppDir/AppRun
+          chmod +x AppDir/AppRun
+          wget -q https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-aarch64.AppImage -O appimagetool
+          chmod +x appimagetool
+          ARCH=aarch64 APPIMAGE_EXTRACT_AND_RUN=1 ./appimagetool AppDir USPSA-VR-aarch64.AppImage
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: USPSA-VR-aarch64.AppImage
+          path: USPSA-VR-aarch64.AppImage
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: USPSA-VR-aarch64.AppImage
