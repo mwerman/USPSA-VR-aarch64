@@ -48,5 +48,3 @@ func _init() -> void:
 		print("Action map saved successfully")
 	else:
 		print("Warning: Failed to save action map - OpenXR may not be available")
-
-quit()
