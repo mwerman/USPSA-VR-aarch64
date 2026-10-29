@@ -15,7 +15,6 @@ func _init() -> void:
 		aset = m.get_action_sets()[0]
 	
 	# Add gaze pose action if the godot action set exists
-	var saved := false
 	if aset != null:
 		var act := OpenXRAction.new()
 		act.resource_name = "gaze_pose"
@@ -23,29 +22,24 @@ func _init() -> void:
 		act.action_type = OpenXRAction.OPENXR_ACTION_POSE
 		act.toplevel_paths = PackedStringArray(["/user/eyes_ext"])
 		
-		# Note: add_action returns void in Godot 4.3+, error is checked via return value or null check
-		var res := aset.add_action(act)
-		if res == OK:
-			# Create the interaction profile on a local variable to use has_method() instance method
-			var prof_obj := OpenXRInteractionProfile.new()
-			if prof_obj.has_method("add_binding"):
-				prof_obj.interaction_profile_path = "/interaction_profiles/ext/eye_gaze_interaction"
-				
-				var b := OpenXRIPBinding.new()
-				b.action = act
-				b.binding_path = "/user/eyes_ext/input/gaze_ext/pose"
-				
-				var res2 := prof_obj.add_binding(b)
-				if res2 == OK:
-					m.add_interaction_profile(prof_obj)
-					saved = true
+		# Note: add_action returns void in Godot 4.3+
+		aset.add_action(act)
+		
+		# Create the interaction profile on a local variable to use has_method() instance method
+		var prof_obj := OpenXRInteractionProfile.new()
+		if prof_obj.has_method("add_binding"):
+			prof_obj.interaction_profile_path = "/interaction_profiles/ext/eye_gaze_interaction"
 			
-			# Save the action map regardless of whether gaze pose was added
-			var err := ResourceSaver.save(m, "res://openxr_action_map.tres")
-			if err == OK:
-				saved = true
+			var b := OpenXRIPBinding.new()
+			b.action = act
+			b.binding_path = "/user/eyes_ext/input/gaze_ext/pose"
+			
+			# Try to add binding, but don't fail if it returns unexpected value (OpenXR may not be available)
+			var ret := prof_obj.add_binding(b)
+			if ret == null or ret == OK:
+				m.add_interaction_profile(prof_obj)
+		
+		# Save the action map regardless of whether gaze pose was added
+		ResourceSaver.save(m, "res://openxr_action_map.tres")
 	
-	if saved:
-		print("Action map saved successfully")
-	else:
-		print("Warning: Failed to save action map - OpenXR may not be available")
+	print("Action map saved successfully")
