@@ -11,11 +11,7 @@ config/icon="res://icon.svg"
 [autoload]
 
 Defs="res://scripts/defs.gd"
-Gun="res://scripts/gun.gd"
-Mag="res://scripts/mag.gd"
 RangeBuilder="res://scripts/range_builder.gd"
-Target="res://scripts/target.gd"
-Barricade="res://scripts/barricade.gd"
 Drills="res://scripts/drills.gd"
 
 [display]
