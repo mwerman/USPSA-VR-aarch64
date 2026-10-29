@@ -21,7 +21,7 @@ func _init() -> void:
 		var b := OpenXRIPBinding.new()
 		b.action = act
 		b.binding_path = "/user/eyes_ext/input/gaze_ext/pose"
-		prof.add_binding(b)
+		prof.add_mapping(b)
 		m.add_interaction_profile(prof)
 	var err := ResourceSaver.save(m, "res://openxr_action_map.tres")
 	print("action map saved, err=", err)
