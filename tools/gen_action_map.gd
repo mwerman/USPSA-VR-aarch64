@@ -10,45 +10,43 @@ func _init() -> void:
 	m.create_default_action_sets()
 	
 	# Find or create the "godot" action set
-	var aset: OpenXRActionSet = m.find_action_set("godot")
+	var aset := m.find_action_set("godot")
 	if aset == null and m.get_action_sets().size() > 0:
 		aset = m.get_action_sets()[0]
 	
 	# Add gaze pose action if the godot action set exists
+	var saved := false
 	if aset != null:
-		try:
-			var act := OpenXRAction.new()
-			act.resource_name = "gaze_pose"
-			act.localized_name = "Gaze pose"
-			act.action_type = OpenXRAction.OPENXR_ACTION_POSE
-			act.toplevel_paths = PackedStringArray(["/user/eyes_ext"])
+		var act := OpenXRAction.new()
+		act.resource_name = "gaze_pose"
+		act.localized_name = "Gaze pose"
+		act.action_type = OpenXRAction.OPENXR_ACTION_POSE
+		act.toplevel_paths = PackedStringArray(["/user/eyes_ext"])
+		
+		var err1 := aset.add_action(act)
+		if err1 == OK:
+			# Check if we can use the interaction profile by checking method existence first
+			if OpenXRInteractionProfile.has_method("add_binding"):
+				var prof := OpenXRInteractionProfile.new()
+				prof.interaction_profile_path = "/interaction_profiles/ext/eye_gaze_interaction"
+				
+				var b := OpenXRIPBinding.new()
+				b.action = act
+				b.binding_path = "/user/eyes_ext/input/gaze_ext/pose"
+				
+				var err2 := prof.add_binding(b)
+				if err2 == OK:
+					m.add_interaction_profile(prof)
+					saved = true
 			
-			var err1 := aset.add_action(act)
-			if err1 == OK:
-				try:
-					var prof := OpenXRInteractionProfile.new()
-					prof.interaction_profile_path = "/interaction_profiles/ext/eye_gaze_interaction"
-					
-					# Use try/catch since add_binding may not exist when OpenXR fails to init
-					var b := OpenXRIPBinding.new()
-					b.action = act
-					b.binding_path = "/user/eyes_ext/input/gaze_ext/pose"
-					
-					var err2 := prof.add_binding(b)
-					if err2 == OK:
-						m.add_interaction_profile(prof)
-				catch e:
-					# add_binding doesn't exist when OpenXR failed - skip the profile
-					pass
-			
-			err = ResourceSaver.save(m, "res://openxr_action_map.tres")
-		catch e:
-			print("Error saving action map:", e.message)
+			# Save the action map regardless of whether gaze pose was added
+			var err := ResourceSaver.save(m, "res://openxr_action_map.tres")
+			if err == OK:
+				saved = true
 	
-	if err == OK:
+	if saved:
 		print("Action map saved successfully")
 	else:
-		print("Warning: Failed to save action map, creating placeholder")
-		ResourceSaver.save({}, "res://openxr_action_map.tres", ResourceSaver.CREATIVE)
+		print("Warning: Failed to save action map - OpenXR may not be available")
 
 quit()
